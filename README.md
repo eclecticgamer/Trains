@@ -1,2 +1,2 @@
 # Trains
-To control trains
+To control train tracks with a raspberry pi pico
