@@ -1,4 +1,4 @@
-import layout
+import Layout
 from machine import Pin, PWM
 from time import sleep
 
@@ -46,15 +46,15 @@ class Track:
 class Trainset:
     def __init__(self):
         self.sensors = {}
-        for s in layout.sensors:
-            self.sensors[s] = Sensor(layout.sensors[s], s)
+        for s in Layout.sensors:
+            self.sensors[s] = Sensor(Layout.sensors[s], s)
         self.points = {}
-        for r in layout.relays:
+        for r in Layout.relays:
             #Initiate self.relays with all relays to up
-            self.points[r] = Point(layout.relays[r])
+            self.points[r] = Point(Layout.relays[r])
         self.tracks = {}
-        for t in layout.tracks:
-            self.tracks[t] = Track(layout.tracks[t])
+        for t in Layout.tracks:
+            self.tracks[t] = Track(Layout.tracks[t])
 
     def run_train(self):
         self.tracks["A"].set_direction(True)
@@ -65,6 +65,6 @@ class Trainset:
 
 t = Trainset()
 t.run_train()
-       
+
 
 
