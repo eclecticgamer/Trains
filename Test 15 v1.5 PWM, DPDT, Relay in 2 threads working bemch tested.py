@@ -43,10 +43,11 @@
 # P40 ++++ VBUS
 
 from machine import Pin, PWM
-from time import sleep
+from asyncio import sleep
 import _thread
 import gc        #garbage collection to stop freezing
 import random
+import asyncio
 
 ####   set global variables
 global Delay_Time_0
@@ -142,25 +143,25 @@ def Track_STOP(Track):
         Track2a.low()
         Track2b.low()
         
-def Wait_For_Down_Loop():
+async def Wait_For_Down_Loop():
     global Down_Train_in_Loop
     while Down_Train_in_Loop == False:
-        sleep(0.2)
+        await sleep(0.2)
     print("Both trains arrived")
 
     Half_Cycle_Complete = True
 
-def Switch_Points(Up_Down):
+async def Switch_Points(Up_Down):
     print("up-down", Up_Down)
-    sleep(1)
+    await sleep(1)
     print
     if Up_Down == 1:
         Relay_P1_DOWN.value(1)
-        sleep(0.2)
+        await sleep(0.2)
         Relay_P1_UP.value(0)
     else:
         Relay_P1_UP.value(1)
-        sleep(0.2)
+        await sleep(0.2)
         Relay_P1_DOWN.value(0)
     pass
 
@@ -183,7 +184,7 @@ def Run_Garbage_Collection():
 
 ####   Define thread operation ZERO
 #############################################################################################
-def core0_thread_up():
+async def core0_thread_up():
 ####   set global variables
     global Delay_Time_0
     global Down_Train_in_Loop
@@ -193,7 +194,7 @@ def core0_thread_up():
 
 #### wait random time before starting
     Delay_Time_0 = random.uniform(1, 10)
-    sleep(Delay_Time_0)
+    await sleep(Delay_Time_0)
     print(Delay_Time_0)
     
 #### start up train
@@ -203,13 +204,13 @@ def core0_thread_up():
     
 #### wait for sensor4 - up train arriving in loop
     while sensorS4.value():
-        sleep(0.2)
+        await sleep(0.2)
     Track_STOP(1)
     print("Up train waiting in loop")
     
 #### wait for core 1 to finish - down train arriving in loop
     while Down_Train_in_Loop == False:
-        sleep(0.2)
+        await sleep(0.2)
 
 #####   set up for completing cycle
     Half_Cycle_Complete = True
@@ -223,7 +224,7 @@ def core0_thread_up():
 
 #### set random delay before Up train departs loop - minimum 2 secs
     Delay_Time_0 = 2 + random.uniform(1, 10)
-    sleep(Delay_Time_0)
+    await sleep(Delay_Time_0)
     
     print("Up train leaving loop")
     Track_START(2)
@@ -231,7 +232,7 @@ def core0_thread_up():
     print("sensorS8 ! ", sensorS8.value())
     while sensorS8.value() == 1:
         print("sensorS8 ! ", sensorS8.value())
-        sleep(0.2)
+        await sleep(0.2)
     print("sensorS8 ! ", sensorS8.value())
     Track_STOP(2)
     
@@ -239,11 +240,13 @@ def core0_thread_up():
     
 #### wait for down train to arrive then house keep ready for next cycle
     while Down_Train_Arrived == False:
-        pass
+        #use sleep here to make sure it's not blocking
+        await sleep(0.1)
+    
     print("Both trains reached destination - housekeeping for next cycle")
     
 #### Housekeeping
-    Switch_Points(1)
+    await Switch_Points(1)
     Toggle_Loop_Polarity(1)
     Cycle_Complete = True
     Run_Garbage_Collection()
@@ -253,7 +256,7 @@ def core0_thread_up():
 #
 #CORE 1
 #######################################################################################################
-def core1_thread_down():
+async def core1_thread_down():
     global Delay_Time_1
     global Down_Train_in_Loop
     global Down_Loop_Clear_Ahead
@@ -263,7 +266,7 @@ def core1_thread_down():
 
 #### wait random time before starting - minimum 1 sec
     Delay_Time_1 = 1 + random.uniform(1, 10)  
-    sleep(Delay_Time_1)
+    await sleep(Delay_Time_1)
 
 #### start up train    
     Track_Direction_UP_DOWN(2, "DOWN")
@@ -272,7 +275,7 @@ def core1_thread_down():
     
 #### wait for sensor5 - down train arriving in loop, stop train and notify arrived
     while sensorS5.value():
-        sleep(0.2)
+        await sleep(0.2)
     Track_STOP(2)
     Down_Train_in_Loop = True
     print("Down loco waiting in loop")
@@ -283,19 +286,15 @@ def core1_thread_down():
         
 #### Ok to depart, wait random time before starting - minimum 2 sec
     Delay_Time_1 = 2 + random.uniform(1, 10)  
-    sleep(Delay_Time_1)
+    await sleep(Delay_Time_1)
 
 #### Down train departing
 #    Track_Direction_UP_DOWN(1, "DOWN")
     Track_START(1)
     print("Down train leaving loop")
-    sleep(4
-          
-          
-          
-          )
+    await sleep(4)
     while not sensorS1.value():
-        sleep(0.2)
+        await sleep(0.2)
         
     Track_STOP(1)
     
@@ -315,5 +314,4 @@ while True:
     print("Starting new cycle ...")
     Cycle_Complete = False
     Half_Cycle_Complete = False
-    second_thread = _thread.start_new_thread(core1_thread_down,())
-    core0_thread_up()
+    await asyncio.gather(core0_thread_up(), core1_thread_down())
